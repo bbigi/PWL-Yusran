@@ -1,61 +1,304 @@
-# CodeIgniter 4 Framework
+# SOAL 3 — Analisis & Perbaikan Kode CRUD AJAX
 
-## What is CodeIgniter?
+> **Mata Kuliah:** Pemrograman Web Lanjut | **Nama:** Yusran  
+> **Universitas Sarjanawiyata Tamansiswa — Informatika, Fakultas Teknik**
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+---
 
-This repository holds the distributable version of the framework.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## Daftar Kesalahan yang Ditemukan
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+Berdasarkan analisis kode (`View/Mahasiswa_view.php`, `Controller/mahasiswa.php`, `Model/MahasiswaModel`), ditemukan **7 kesalahan kritis**.
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+---
 
-## Important Change with index.php
+## ❌ Kesalahan 1 — JavaScript: `loadData` dipanggil tanpa tanda kurung
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+**Lokasi:** View — Baris 38
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+**Kode Bermasalah:**
+```javascript
+success: function(res) {
+    alert('Data berhasil disimpan');
+    loadData;   // ← SALAH! Ini referensi fungsi, bukan pemanggilan
+}
+```
 
-**Please** read the user guide for a better explanation of how CI4 works!
+**Penyebab:**  
+`loadData` tanpa `()` hanya mereferensikan fungsi sebagai nilai, tidak memanggilnya. Ini kesalahan logika JavaScript yang sangat umum.
 
-## Repository Management
+**Dampak:**  
+Setelah data berhasil disimpan, tabel tidak akan diperbarui. User harus refresh halaman manual untuk melihat data baru.
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+---
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+## ❌ Kesalahan 2 — JavaScript: Selector `#tbody` tidak ada di HTML
 
-## Contributing
+**Lokasi:** View — Baris 20
 
-We welcome contributions from the community.
+**Kode Bermasalah:**
+```javascript
+$("#tbody").html(html);   // ← Menggunakan ID selector #tbody
+```
 
-Please read the [*Contributing to CodeIgniter*](https://github.com/codeigniter4/CodeIgniter4/blob/develop/CONTRIBUTING.md) section in the development repository.
+**Penyebab:**  
+Elemen `<tbody>` di HTML jarang diberi atribut `id='tbody'`. Jika HTML menggunakan `<tbody>` tanpa id, jQuery tidak akan menemukan elemen tersebut.
 
-## Server Requirements
+**Dampak:**  
+Data yang diterima dari server tidak akan pernah ditampilkan di tabel. Tabel akan selalu kosong meskipun data ada di database.
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+---
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+## ❌ Kesalahan 3 — Controller: Menggunakan `return json_encode()`
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+**Lokasi:** Controller — Baris 7
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+**Kode Bermasalah:**
+```php
+public function getData() {
+    $model = new MahasiswaModel();
+    $data = $model->findAll();
+    return json_encode($data);  // ← SALAH untuk CodeIgniter 4!
+}
+```
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+**Penyebab:**  
+Di CodeIgniter 4, Controller harus mengembalikan objek Response, bukan string biasa. Menggunakan `return` dengan string menyebabkan response tidak dikirim dengan header `Content-Type` yang benar.
+
+**Dampak:**  
+Browser tidak mengenali response sebagai JSON, sehingga jQuery AJAX gagal mem-parse response dan `success` callback tidak terpanggil dengan benar.
+
+---
+
+## ❌ Kesalahan 4 — Controller: Instansiasi Model Manual di Setiap Method
+
+**Lokasi:** Controller — Baris 3 dan 12
+
+**Kode Bermasalah:**
+```php
+$model = new MahasiswaModel();   // ← Diulang di setiap method
+```
+
+**Penyebab:**  
+Membuat `new MahasiswaModel()` manual di setiap method melanggar prinsip **DRY (Don't Repeat Yourself)** dan tidak memanfaatkan arsitektur CI4 dengan benar.
+
+**Dampak:**  
+Kode lebih verbose dan tidak efisien. Jika nama Model berubah, harus diganti di setiap method satu per satu.
+
+---
+
+## ❌ Kesalahan 5 — Controller: `echo 'success'` bukan JSON Response
+
+**Lokasi:** Controller — Baris 19
+
+**Kode Bermasalah:**
+```php
+public function simpan() {
+    // ...
+    echo 'success';   // ← Response tidak konsisten
+}
+```
+
+**Penyebab:**  
+`getData()` mengembalikan JSON, tapi `simpan()` mengembalikan plain string `'success'`. Tidak konsisten dan tidak bisa dikembangkan.
+
+**Dampak:**  
+Jika client menggunakan `dataType: 'json'`, string `'success'` akan menyebabkan JSON parse error di console.
+
+---
+
+## ❌ Kesalahan 6 — Model: Tidak Ada `$allowedFields`
+
+**Lokasi:** Model/MahasiswaModel — Baris 7
+
+**Kode Bermasalah:**
+```php
+class MahasiswaModel extends Model
+{
+    protected $table = 'mahasiswa';
+    protected $primaryKey = 'id';
+    // tidak ada allowedFields   // ← SANGAT BERBAHAYA!
+}
+```
+
+**Penyebab:**  
+Di CodeIgniter 4, `$allowedFields` adalah whitelist kolom yang boleh diisi melalui `insert()` atau `save()`. Tanpa ini, CI4 akan menolak operasi insert/update.
+
+**Dampak:**  
+Operasi `$model->insert()` akan gagal atau melempar exception. Data tidak bisa tersimpan ke database.
+
+---
+
+## ❌ Kesalahan 7 — Model: Tidak Ada Namespace
+
+**Lokasi:** Model/MahasiswaModel — Baris 1-2
+
+**Kode Bermasalah:**
+```php
+<?php
+class MahasiswaModel extends Model   // ← Tidak ada namespace App\Models;
+```
+
+**Penyebab:**  
+Di CodeIgniter 4, setiap Model harus memiliki `namespace App\Models` dan meng-extend `CodeIgniter\Model`. Tanpa namespace, autoloader CI4 tidak bisa menemukan class ini.
+
+**Dampak:**  
+`Fatal Error: Class 'MahasiswaModel' not found` — seluruh fitur CRUD lumpuh.
+
+---
+
+## ✅ Solusi & Kode yang Diperbaiki
+
+### Perbaikan View (`mahasiswa_view.php`)
+*Mengatasi Kesalahan 1 dan 2*
+
+```javascript
+<script>
+$(document).ready(function() {
+    loadData();
+
+    function loadData() {
+        $.ajax({
+            url: 'http://localhost/ci4/public/mahasiswa/getData',
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                let html = '';
+                response.data.forEach(function(row) {
+                    html += '<tr>';
+                    html += '<td>' + row.id + '</td>';
+                    html += '<td>' + row.nama + '</td>';
+                    html += '<td>' + row.prodi + '</td>';
+                    html += '</tr>';
+                });
+                $('#tbody').html(html);   // ✅ Pastikan <tbody id='tbody'> di HTML
+            },
+            error: function(xhr) {
+                console.error('Error:', xhr.responseText);
+            }
+        });
+    }
+
+    $('#btnSimpan').click(function() {
+        let nama  = $('#nama').val();
+        let prodi = $('#prodi').val();
+
+        $.ajax({
+            url: 'http://localhost/ci4/public/mahasiswa/simpan',
+            method: 'POST',
+            data: { nama: nama, prodi: prodi },
+            dataType: 'json',
+            success: function(res) {
+                if (res.status === 'success') {
+                    alert('Data berhasil disimpan');
+                    loadData();   // ✅ DIPERBAIKI: loadData() dengan tanda kurung
+                }
+            },
+            error: function(xhr) {
+                console.error('Gagal simpan:', xhr.responseText);
+            }
+        });
+    });
+});
+</script>
+```
+
+**Alasan perbaikan:**
+- `loadData()` dengan `()` → memanggil fungsi, bukan hanya mereferensikannya
+- Tambahan `error` handler → memudahkan debugging jika AJAX gagal
+- `dataType: 'json'` konsisten → response dari server harus berformat JSON
+
+---
+
+### Perbaikan Controller (`Mahasiswa.php`)
+*Mengatasi Kesalahan 3, 4, dan 5*
+
+```php
+<?php
+namespace App\Controllers;   // ✅ DITAMBAHKAN: Namespace wajib di CI4
+
+use App\Models\MahasiswaModel;
+
+class Mahasiswa extends BaseController
+{
+    protected $mahasiswaModel;
+
+    public function __construct()
+    {
+        // ✅ DIPERBAIKI: Instansiasi sekali di constructor
+        $this->mahasiswaModel = new MahasiswaModel();
+    }
+
+    public function getData()
+    {
+        $data = $this->mahasiswaModel->findAll();
+        // ✅ DIPERBAIKI: Gunakan $this->response dengan header JSON
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data'   => $data
+        ]);
+    }
+
+    public function simpan()
+    {
+        $this->mahasiswaModel->insert([
+            'nama'  => $this->request->getPost('nama'),
+            'prodi' => $this->request->getPost('prodi')
+        ]);
+        // ✅ DIPERBAIKI: Response JSON konsisten
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => 'Data berhasil disimpan'
+        ]);
+    }
+}
+```
+
+**Alasan perbaikan:**
+- `namespace App\Controllers` → wajib agar autoloader CI4 menemukan class
+- `$this->mahasiswaModel` di constructor → DRY principle, tidak instansiasi ulang
+- `$this->response->setJSON()` → mengirim header `Content-Type: application/json` secara otomatis dan benar
+
+---
+
+### Perbaikan Model (`MahasiswaModel.php`)
+*Mengatasi Kesalahan 6 dan 7*
+
+```php
+<?php
+namespace App\Models;   // ✅ DITAMBAHKAN: Namespace wajib
+
+use CodeIgniter\Model;  // ✅ DITAMBAHKAN: Import class Model CI4
+
+class MahasiswaModel extends Model
+{
+    protected $table      = 'mahasiswa';
+    protected $primaryKey = 'id';
+
+    // ✅ DITAMBAHKAN: allowedFields WAJIB untuk operasi insert/update
+    protected $allowedFields = ['nama', 'prodi'];
+
+    // Opsional tapi sangat direkomendasikan:
+    protected $useTimestamps = true;    // Auto-isi created_at & updated_at
+    protected $returnType    = 'array'; // Return data sebagai array
+}
+```
+
+**Alasan perbaikan:**
+- `namespace App\Models` → wajib agar autoloader CI4 menemukan class Model
+- `use CodeIgniter\Model` → import class yang benar dari framework
+- `$allowedFields = ['nama', 'prodi']` → wajib di CI4 untuk mencegah Mass Assignment Attack dan memungkinkan operasi insert/update berhasil
+- `$useTimestamps` → best practice untuk audit trail data
+
+---
+
+## Ringkasan
+
+| No | Kesalahan | Solusi |
+|----|-----------|--------|
+| 1 | `loadData;` tanpa `()` di JS | Ubah menjadi `loadData();` |
+| 2 | Selector `#tbody` tidak sesuai HTML | Pastikan elemen HTML memiliki `id='tbody'` |
+| 3 | `return json_encode()` di Controller | Gunakan `return $this->response->setJSON()` |
+| 4 | Instansiasi Model manual tiap method | Pindahkan ke `__construct()` dengan `$this->mahasiswaModel` |
+| 5 | `echo 'success'` tidak konsisten | Gunakan `return $this->response->setJSON(['status'=>'success'])` |
+| 6 | Tidak ada `$allowedFields` di Model | Tambahkan `protected $allowedFields = ['nama', 'prodi']` |
+| 7 | Tidak ada namespace di Model/Controller | Tambahkan `namespace App\Models;` dan `namespace App\Controllers;` |
