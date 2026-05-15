@@ -304,7 +304,7 @@ class MahasiswaModel extends Model
 | 7 | Tidak ada namespace di Model/Controller | Tambahkan `namespace App\Models;` dan `namespace App\Controllers;` |
 
 
-##Hasil
+## Hasil
 <img width="923" height="473" alt="image" src="https://github.com/user-attachments/assets/21fcda7e-8d3d-495f-aa13-04f748e226e3" />
 <img width="903" height="466" alt="image" src="https://github.com/user-attachments/assets/ed54a4f9-5c13-41b8-907a-af0f67849fb7" />
 <img width="918" height="472" alt="image" src="https://github.com/user-attachments/assets/86f2671d-dcb2-4d4a-a1d9-c2d50a65dcd4" />
