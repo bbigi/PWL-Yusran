@@ -302,3 +302,11 @@ class MahasiswaModel extends Model
 | 5 | `echo 'success'` tidak konsisten | Gunakan `return $this->response->setJSON(['status'=>'success'])` |
 | 6 | Tidak ada `$allowedFields` di Model | Tambahkan `protected $allowedFields = ['nama', 'prodi']` |
 | 7 | Tidak ada namespace di Model/Controller | Tambahkan `namespace App\Models;` dan `namespace App\Controllers;` |
+
+
+##Hasil
+<img width="923" height="473" alt="image" src="https://github.com/user-attachments/assets/21fcda7e-8d3d-495f-aa13-04f748e226e3" />
+<img width="903" height="466" alt="image" src="https://github.com/user-attachments/assets/ed54a4f9-5c13-41b8-907a-af0f67849fb7" />
+<img width="918" height="472" alt="image" src="https://github.com/user-attachments/assets/86f2671d-dcb2-4d4a-a1d9-c2d50a65dcd4" />
+<img width="911" height="467" alt="image" src="https://github.com/user-attachments/assets/6ca5877a-c37e-4f05-8bce-9cc9ed7941f3" />
+<img width="912" height="470" alt="image" src="https://github.com/user-attachments/assets/a00047f3-3423-455c-9e53-f62ceb17ebd5" />
